@@ -1,0 +1,43 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Daily Standup Logger</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>📝 Daily Standup</h1>
+            <p id="currentDate"></p>
+        </header>
+
+        <div class="input-section">
+            <label>What did you work on today?</label>
+            <textarea id="todayWork" placeholder="• Fixed login bug&#10;• Reviewed PR #123&#10;• Started dashboard"></textarea>
+
+            <label>Any blockers?</label>
+            <textarea id="blockers" placeholder="• Waiting for API access&#10;• Need design review"></textarea>
+
+            <button id="saveBtn" onclick="saveEntry()">Save Today's Entry</button>
+        </div>
+
+        <div class="tabs">
+            <button class="tab active" onclick="showTab('today')">Today</button>
+            <button class="tab" onclick="showTab('week')">This Week</button>
+        </div>
+
+        <div id="todayView" class="view">
+            <!-- Today's entry shows here -->
+        </div>
+
+        <div id="weekView" class="view hidden">
+            <button onclick="generateWeeklyReport()">📋 Generate Report for Meeting</button>
+            <div id="weeklyReport"></div>
+        </div>
+    </div>
+
+    <script src="script.js"></script>
+</body>
+</html>
