@@ -1,0 +1,1114 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Performance & Standup Logger</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Arial, sans-serif;
+            background: #f5f5f7;
+            color: #1d1d1f;
+            line-height: 1.6;
+        }
+
+        .container {
+            max-width: 1000px;
+            margin: 0 auto;
+            min-height: 100vh;
+            background: white;
+        }
+
+        header {
+            background: linear-gradient(135deg, #007AFF, #0051D5);
+            color: white;
+            padding: 20px;
+            text-align: center;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+
+        header h1 {
+            font-size: 28px;
+            margin-bottom: 5px;
+        }
+
+        header p {
+            opacity: 0.9;
+            font-size: 14px;
+        }
+
+        .main-content {
+            display: grid;
+            grid-template-columns: 250px 1fr;
+            min-height: calc(100vh - 100px);
+        }
+
+        .sidebar {
+            background: #f8f9fa;
+            border-right: 1px solid #e9ecef;
+            padding: 20px;
+        }
+
+        .date-picker {
+            margin-bottom: 20px;
+        }
+
+        .date-picker input {
+            width: 100%;
+            padding: 10px;
+            border: 1px solid #d2d2d7;
+            border-radius: 6px;
+            font-size: 14px;
+        }
+
+        .quick-dates {
+            margin: 15px 0;
+        }
+
+        .quick-date-btn {
+            display: block;
+            width: 100%;
+            padding: 8px 12px;
+            margin: 5px 0;
+            background: transparent;
+            border: 1px solid #d2d2d7;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 12px;
+            text-align: left;
+        }
+
+        .quick-date-btn:hover {
+            background: #e9ecef;
+        }
+
+        .quick-date-btn.active {
+            background: #007AFF;
+            color: white;
+            border-color: #007AFF;
+        }
+
+        .entries-list {
+            max-height: 400px;
+            overflow-y: auto;
+        }
+
+        .entry-item {
+            padding: 10px;
+            border: 1px solid #e9ecef;
+            border-radius: 6px;
+            margin: 5px 0;
+            cursor: pointer;
+            font-size: 12px;
+        }
+
+        .entry-item:hover {
+            background: #f0f0f0;
+        }
+
+        .entry-item.active {
+            background: #007AFF;
+            color: white;
+        }
+
+        .main-panel {
+            padding: 20px;
+        }
+
+        .tabs {
+            display: flex;
+            border-bottom: 1px solid #d2d2d7;
+            margin-bottom: 20px;
+        }
+
+        .tab {
+            flex: 1;
+            padding: 12px 20px;
+            background: transparent;
+            color: #1d1d1f;
+            border: none;
+            border-radius: 0;
+            font-weight: 500;
+            cursor: pointer;
+            font-size: 14px;
+        }
+
+        .tab.active {
+            color: #007AFF;
+            border-bottom: 2px solid #007AFF;
+            background: rgba(0, 122, 255, 0.05);
+        }
+
+        .view {
+            min-height: 500px;
+        }
+
+        .hidden {
+            display: none;
+        }
+
+        .form-group {
+            margin-bottom: 20px;
+        }
+
+        label {
+            display: block;
+            font-weight: 600;
+            margin-bottom: 8px;
+            color: #1d1d1f;
+        }
+
+        input, textarea, select {
+            width: 100%;
+            padding: 12px;
+            border: 1px solid #d2d2d7;
+            border-radius: 8px;
+            font-size: 16px;
+            font-family: inherit;
+        }
+
+        textarea {
+            min-height: 120px;
+            resize: vertical;
+        }
+
+        input:focus, textarea:focus, select:focus {
+            outline: none;
+            border-color: #007AFF;
+            box-shadow: 0 0 0 3px rgba(0, 122, 255, 0.1);
+        }
+
+        .file-upload {
+            border: 2px dashed #d2d2d7;
+            border-radius: 8px;
+            padding: 20px;
+            text-align: center;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+
+        .file-upload:hover {
+            border-color: #007AFF;
+            background: rgba(0, 122, 255, 0.05);
+        }
+
+        .file-upload.dragover {
+            border-color: #007AFF;
+            background: rgba(0, 122, 255, 0.1);
+        }
+
+        .uploaded-files {
+            margin-top: 10px;
+        }
+
+        .file-item {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 8px 12px;
+            background: #f8f9fa;
+            border-radius: 6px;
+            margin: 5px 0;
+        }
+
+        .file-item .file-name {
+            font-size: 14px;
+            color: #495057;
+        }
+
+        .file-item .remove-file {
+            background: #dc3545;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            padding: 4px 8px;
+            font-size: 12px;
+            cursor: pointer;
+        }
+
+        button {
+            background: #007AFF;
+            color: white;
+            border: none;
+            padding: 12px 24px;
+            border-radius: 8px;
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: background 0.2s;
+        }
+
+        button:hover {
+            background: #0051D5;
+        }
+
+        button:active {
+            background: #003d99;
+        }
+
+        .btn-secondary {
+            background: #6c757d;
+        }
+
+        .btn-secondary:hover {
+            background: #545b62;
+        }
+
+        .btn-success {
+            background: #28a745;
+        }
+
+        .btn-success:hover {
+            background: #218838;
+        }
+
+        .btn-danger {
+            background: #dc3545;
+        }
+
+        .btn-danger:hover {
+            background: #c82333;
+        }
+
+        .button-group {
+            display: flex;
+            gap: 10px;
+            margin-top: 20px;
+        }
+
+        .entry-display {
+            background: #f8f9fa;
+            padding: 20px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+        }
+
+        .entry-meta {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 15px;
+            padding-bottom: 10px;
+            border-bottom: 1px solid #dee2e6;
+        }
+
+        .entry-date {
+            font-weight: 600;
+            color: #007AFF;
+            font-size: 18px;
+        }
+
+        .entry-category {
+            background: #007AFF;
+            color: white;
+            padding: 4px 8px;
+            border-radius: 4px;
+            font-size: 12px;
+        }
+
+        .entry-content {
+            white-space: pre-wrap;
+            line-height: 1.6;
+            margin-bottom: 15px;
+        }
+
+        .performance-summary {
+            background: linear-gradient(135deg, #f8f9fa, #e9ecef);
+            padding: 20px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+        }
+
+        .summary-stats {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 15px;
+            margin-bottom: 20px;
+        }
+
+        .stat-card {
+            background: white;
+            padding: 15px;
+            border-radius: 8px;
+            text-align: center;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+
+        .stat-number {
+            font-size: 24px;
+            font-weight: 700;
+            color: #007AFF;
+        }
+
+        .stat-label {
+            font-size: 12px;
+            color: #6c757d;
+            margin-top: 5px;
+        }
+
+        .export-options {
+            display: flex;
+            gap: 10px;
+            margin-top: 15px;
+        }
+
+        .no-entries {
+            text-align: center;
+            color: #6c757d;
+            padding: 40px;
+            font-style: italic;
+        }
+
+        @media (max-width: 768px) {
+            .main-content {
+                grid-template-columns: 1fr;
+            }
+            
+            .sidebar {
+                border-right: none;
+                border-bottom: 1px solid #e9ecef;
+            }
+            
+            .summary-stats {
+                grid-template-columns: 1fr 1fr;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>📊 Performance & Standup Logger</h1>
+            <p id="currentDate"></p>
+        </header>
+
+        <div class="main-content">
+            <div class="sidebar">
+                <div class="date-picker">
+                    <label for="entryDate">Select Date:</label>
+                    <input type="date" id="entryDate">
+                </div>
+                
+                <div class="quick-dates">
+                    <button class="quick-date-btn active" onclick="setQuickDate('today')">📅 Today</button>
+                    <button class="quick-date-btn" onclick="setQuickDate('yesterday')">📅 Yesterday</button>
+                    <button class="quick-date-btn" onclick="setQuickDate('thisWeek')">📅 This Week</button>
+                    <button class="quick-date-btn" onclick="setQuickDate('lastWeek')">📅 Last Week</button>
+                    <button class="quick-date-btn" onclick="setQuickDate('thisMonth')">📅 This Month</button>
+                </div>
+
+                <div class="entries-list" id="entriesList">
+                    <!-- Entries will be populated here -->
+                </div>
+            </div>
+
+            <div class="main-panel">
+                <div class="tabs">
+                    <button class="tab active" onclick="showTab('entry')">📝 Log Entry</button>
+                    <button class="tab" onclick="showTab('view')">👁️ View Entry</button>
+                    <button class="tab" onclick="showTab('performance')">📈 Performance Review</button>
+                </div>
+
+                <div id="entryView" class="view">
+                    <form id="entryForm">
+                        <div class="form-group">
+                            <label for="category">Category:</label>
+                            <select id="category" required>
+                                <option value="standup">Daily Standup</option>
+                                <option value="achievement">Achievement</option>
+                                <option value="project">Project Work</option>
+                                <option value="meeting">Meeting Notes</option>
+                                <option value="learning">Learning & Development</option>
+                                <option value="other">Other</option>
+                            </select>
+                        </div>
+
+                        <div class="form-group">
+                            <label for="todayWork">What did you accomplish?</label>
+                            <textarea id="todayWork" placeholder="• Completed user authentication module&#10;• Fixed critical bug in payment system&#10;• Led team standup meeting&#10;• Reviewed 3 pull requests" required></textarea>
+                        </div>
+
+                        <div class="form-group">
+                            <label for="blockers">Challenges/Blockers:</label>
+                            <textarea id="blockers" placeholder="• Waiting for design approval&#10;• Need access to production database&#10;• Dependency on external API"></textarea>
+                        </div>
+
+                        <div class="form-group">
+                            <label for="nextSteps">Next Steps/Goals:</label>
+                            <textarea id="nextSteps" placeholder="• Start integration testing&#10;• Schedule client demo&#10;• Document new API endpoints"></textarea>
+                        </div>
+
+                        <div class="form-group">
+                            <label>Attach Files (PDF, DOCX, Images):</label>
+                            <div class="file-upload" id="fileUpload">
+                                <p>📎 Drag & drop files here or click to browse</p>
+                                <input type="file" id="fileInput" multiple accept=".pdf,.docx,.doc,.png,.jpg,.jpeg,.gif" style="display: none;">
+                            </div>
+                            <div class="uploaded-files" id="uploadedFiles"></div>
+                        </div>
+
+                        <div class="button-group">
+                            <button type="submit" id="saveBtn">💾 Save Entry</button>
+                            <button type="button" class="btn-secondary" onclick="clearForm()">🗑️ Clear Form</button>
+                        </div>
+                    </form>
+                </div>
+
+                <div id="viewEntryView" class="view hidden">
+                    <div id="entryDisplay" class="no-entries">
+                        Select a date or entry from the sidebar to view details
+                    </div>
+                    <div class="button-group" id="viewActions" style="display: none;">
+                        <button onclick="editCurrentEntry()" class="btn-secondary">✏️ Edit Entry</button>
+                        <button onclick="deleteCurrentEntry()" class="btn-danger">🗑️ Delete Entry</button>
+                    </div>
+                </div>
+
+                <div id="performanceView" class="view hidden">
+                    <div class="performance-summary">
+                        <h3>📊 Performance Summary</h3>
+                        <div class="summary-stats" id="summaryStats">
+                            <!-- Stats will be populated here -->
+                        </div>
+                        
+                        <div class="form-group">
+                            <label for="reportPeriod">Report Period:</label>
+                            <select id="reportPeriod" onchange="updatePerformanceSummary()">
+                                <option value="thisWeek">This Week</option>
+                                <option value="thisMonth">This Month</option>
+                                <option value="thisQuarter">This Quarter</option>
+                                <option value="thisYear">This Year</option>
+                                <option value="custom">Custom Range</option>
+                            </select>
+                        </div>
+
+                        <div class="export-options">
+                            <button onclick="exportReport('text')" class="btn-success">📄 Export as Text</button>
+                            <button onclick="exportReport('json')" class="btn-secondary">💾 Export as JSON</button>
+                            <button onclick="copyToClipboard()" class="btn-secondary">📋 Copy to Clipboard</button>
+                        </div>
+                    </div>
+
+                    <div id="performanceEntries">
+                        <!-- Performance entries will be displayed here -->
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Initialize app
+        let currentEditingEntry = null;
+        let uploadedFiles = [];
+
+        // Set current date
+        document.getElementById('currentDate').textContent = new Date().toLocaleDateString('en-US', { 
+            weekday: 'long', 
+            year: 'numeric', 
+            month: 'long', 
+            day: 'numeric' 
+        });
+
+        // Set today's date as default
+        document.getElementById('entryDate').valueAsDate = new Date();
+
+        // File upload handling
+        const fileUpload = document.getElementById('fileUpload');
+        const fileInput = document.getElementById('fileInput');
+
+        fileUpload.addEventListener('click', () => fileInput.click());
+        fileUpload.addEventListener('dragover', (e) => {
+            e.preventDefault();
+            fileUpload.classList.add('dragover');
+        });
+
+        fileUpload.addEventListener('dragleave', () => {
+            fileUpload.classList.remove('dragover');
+        });
+
+        fileUpload.addEventListener('drop', (e) => {
+            e.preventDefault();
+            fileUpload.classList.remove('dragover');
+            handleFiles(e.dataTransfer.files);
+        });
+
+        fileInput.addEventListener('change', (e) => {
+            handleFiles(e.target.files);
+        });
+
+        function handleFiles(files) {
+            Array.from(files).forEach(file => {
+                if (file.size > 10 * 1024 * 1024) { // 10MB limit
+                    alert(`File ${file.name} is too large. Maximum size is 10MB.`);
+                    return;
+                }
+
+                const reader = new FileReader();
+                reader.onload = (e) => {
+                    const fileData = {
+                        name: file.name,
+                        type: file.type,
+                        size: file.size,
+                        data: e.target.result,
+                        uploadDate: new Date().toISOString()
+                    };
+                    uploadedFiles.push(fileData);
+                    displayUploadedFiles();
+                };
+                reader.readAsDataURL(file);
+            });
+        }
+
+        function displayUploadedFiles() {
+            const container = document.getElementById('uploadedFiles');
+            container.innerHTML = uploadedFiles.map((file, index) => `
+                <div class="file-item">
+                    <span class="file-name">📎 ${file.name} (${(file.size / 1024).toFixed(1)} KB)</span>
+                    <button type="button" class="remove-file" onclick="removeFile(${index})">Remove</button>
+                </div>
+            `).join('');
+        }
+
+        function removeFile(index) {
+            uploadedFiles.splice(index, 1);
+            displayUploadedFiles();
+        }
+
+        // Form handling
+        document.getElementById('entryForm').addEventListener('submit', (e) => {
+            e.preventDefault();
+            saveEntry();
+        });
+
+        function saveEntry() {
+            const entryDate = document.getElementById('entryDate').value;
+            const category = document.getElementById('category').value;
+            const todayWork = document.getElementById('todayWork').value;
+            const blockers = document.getElementById('blockers').value;
+            const nextSteps = document.getElementById('nextSteps').value;
+
+            if (!todayWork.trim()) {
+                alert('Please enter what you accomplished!');
+                return;
+            }
+
+            const entry = {
+                id: currentEditingEntry || Date.now().toString(),
+                date: entryDate,
+                category: category,
+                work: todayWork,
+                blockers: blockers,
+                nextSteps: nextSteps,
+                files: [...uploadedFiles],
+                createdAt: currentEditingEntry ? getEntryById(currentEditingEntry).createdAt : new Date().toISOString(),
+                updatedAt: new Date().toISOString()
+            };
+
+            // Save to storage
+            const allEntries = getAllEntries();
+            const existingIndex = allEntries.findIndex(e => e.id === entry.id);
+            
+            if (existingIndex !== -1) {
+                allEntries[existingIndex] = entry;
+            } else {
+                allEntries.push(entry);
+            }
+
+            saveAllEntries(allEntries);
+
+            // Show success
+            const btn = document.getElementById('saveBtn');
+            const originalText = btn.textContent;
+            btn.textContent = '✅ Saved!';
+            btn.classList.add('btn-success');
+
+            setTimeout(() => {
+                btn.textContent = originalText;
+                btn.classList.remove('btn-success');
+            }, 2000);
+
+            // Clear form and reset
+            clearForm();
+            currentEditingEntry = null;
+            updateEntriesList();
+            
+            // Switch to view tab
+            showTab('view');
+            displayEntry(entry);
+        }
+
+        function clearForm() {
+            document.getElementById('entryForm').reset();
+            document.getElementById('entryDate').valueAsDate = new Date();
+            uploadedFiles = [];
+            displayUploadedFiles();
+        }
+
+        // Storage functions
+        function getAllEntries() {
+            const stored = JSON.parse(localStorage.getItem('performanceEntries') || '[]');
+            return stored.sort((a, b) => new Date(b.date) - new Date(a.date));
+        }
+
+        function saveAllEntries(entries) {
+            localStorage.setItem('performanceEntries', JSON.stringify(entries));
+        }
+
+        function getEntryById(id) {
+            return getAllEntries().find(e => e.id === id);
+        }
+
+        function getEntriesByDateRange(startDate, endDate) {
+            const entries = getAllEntries();
+            return entries.filter(entry => {
+                const entryDate = new Date(entry.date);
+                return entryDate >= startDate && entryDate <= endDate;
+            });
+        }
+
+        // Tab switching
+        function showTab(tab) {
+            // Update active tab
+            document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+            event.target.classList.add('active');
+
+            // Show/hide views
+            document.querySelectorAll('.view').forEach(v => v.classList.add('hidden'));
+            
+            if (tab === 'entry') {
+                document.getElementById('entryView').classList.remove('hidden');
+            } else if (tab === 'view') {
+                document.getElementById('viewEntryView').classList.remove('hidden');
+                updateEntriesList();
+            } else if (tab === 'performance') {
+                document.getElementById('performanceView').classList.remove('hidden');
+                updatePerformanceSummary();
+            }
+        }
+
+        // Quick date functions
+        function setQuickDate(period) {
+            // Update active button
+            document.querySelectorAll('.quick-date-btn').forEach(btn => btn.classList.remove('active'));
+            event.target.classList.add('active');
+
+            const today = new Date();
+            let startDate, endDate;
+
+            switch(period) {
+                case 'today':
+                    document.getElementById('entryDate').valueAsDate = today;
+                    updateEntriesList();
+                    return;
+                case 'yesterday':
+                    const yesterday = new Date(today);
+                    yesterday.setDate(yesterday.getDate() - 1);
+                    document.getElementById('entryDate').valueAsDate = yesterday;
+                    updateEntriesList();
+                    return;
+                case 'thisWeek':
+                    startDate = new Date(today);
+                    startDate.setDate(today.getDate() - today.getDay());
+                    endDate = new Date(startDate);
+                    endDate.setDate(startDate.getDate() + 6);
+                    break;
+                case 'lastWeek':
+                    startDate = new Date(today);
+                    startDate.setDate(today.getDate() - today.getDay() - 7);
+                    endDate = new Date(startDate);
+                    endDate.setDate(startDate.getDate() + 6);
+                    break;
+                case 'thisMonth':
+                    startDate = new Date(today.getFullYear(), today.getMonth(), 1);
+                    endDate = new Date(today.getFullYear(), today.getMonth() + 1, 0);
+                    break;
+            }
+
+            displayEntriesForRange(startDate, endDate);
+        }
+
+        // Entries list management
+        function updateEntriesList() {
+            const selectedDate = document.getElementById('entryDate').value;
+            const entries = getAllEntries();
+            const dateEntries = entries.filter(entry => entry.date === selectedDate);
+            
+            const container = document.getElementById('entriesList');
+            
+            if (dateEntries.length === 0) {
+                container.innerHTML = '<div class="no-entries">No entries for selected date</div>';
+                document.getElementById('entryDisplay').innerHTML = '<div class="no-entries">No entry found for this date</div>';
+                document.getElementById('viewActions').style.display = 'none';
+                return;
+            }
+
+            container.innerHTML = dateEntries.map(entry => `
+                <div class="entry-item" onclick="selectEntry('${entry.id}')">
+                    <div style="font-weight: 600;">${getCategoryIcon(entry.category)} ${entry.category}</div>
+                    <div style="font-size: 11px; color: #6c757d; margin-top: 5px;">
+                        ${new Date(entry.updatedAt).toLocaleTimeString()}
+                    </div>
+                </div>
+            `).join('');
+
+            // Auto-select first entry
+            if (dateEntries.length > 0) {
+                selectEntry(dateEntries[0].id);
+            }
+        }
+
+        function displayEntriesForRange(startDate, endDate) {
+            const entries = getEntriesByDateRange(startDate, endDate);
+            const container = document.getElementById('entriesList');
+            
+            if (entries.length === 0) {
+                container.innerHTML = '<div class="no-entries">No entries for this period</div>';
+                return;
+            }
+
+            const groupedEntries = groupEntriesByDate(entries);
+            container.innerHTML = Object.keys(groupedEntries).map(date => `
+                <div style="font-weight: 600; margin: 10px 0 5px 0; color: #007AFF;">${new Date(date).toLocaleDateString()}</div>
+                ${groupedEntries[date].map(entry => `
+                    <div class="entry-item" onclick="selectEntry('${entry.id}')">
+                        <div style="font-weight: 600;">${getCategoryIcon(entry.category)} ${entry.category}</div>
+                        <div style="font-size: 11px; color: #6c757d; margin-top: 5px;">
+                            ${new Date(entry.updatedAt).toLocaleTimeString()}
+                        </div>
+                    </div>
+                `).join('')}
+            `).join('');
+        }
+
+        function groupEntriesByDate(entries) {
+            return entries.reduce((groups, entry) => {
+                const date = entry.date;
+                if (!groups[date]) {
+                    groups[date] = [];
+                }
+                groups[date].push(entry);
+                return groups;
+            }, {});
+        }
+
+        function selectEntry(entryId) {
+            // Update active entry in list
+            document.querySelectorAll('.entry-item').forEach(item => item.classList.remove('active'));
+            event.target.closest('.entry-item').classList.add('active');
+
+            const entry = getEntryById(entryId);
+            if (entry) {
+                displayEntry(entry);
+                document.getElementById('viewActions').style.display = 'flex';
+            }
+        }
+
+        function displayEntry(entry) {
+            const filesHtml = entry.files && entry.files.length > 0 ? `
+                <div style="margin-top: 15px;">
+                    <strong>📎 Attached Files:</strong><br>
+                    ${entry.files.map(file => `
+                        <div style="margin: 5px 0; padding: 8px; background: white; border-radius: 4px; border: 1px solid #dee2e6;">
+                            <a href="${file.data}" download="${file.name}" style="color: #007AFF; text-decoration: none;">
+                                📄 ${file.name} (${(file.size / 1024).toFixed(1)} KB)
+                            </a>
+                        </div>
+                    `).join('')}
+                </div>
+            ` : '';
+
+            document.getElementById('entryDisplay').innerHTML = `
+                <div class="entry-display">
+                    <div class="entry-meta">
+                        <div class="entry-date">${new Date(entry.date).toLocaleDateString('en-US', { 
+                            weekday: 'long', 
+                            year: 'numeric', 
+                            month: 'long', 
+                            day: 'numeric' 
+                        })}</div>
+                        <div class="entry-category">${getCategoryIcon(entry.category)} ${entry.category}</div>
+                    </div>
+                    
+                    <div class="entry-content">
+                        <strong>🎯 Accomplishments:</strong><br>
+                        ${entry.work}
+                        
+                        ${entry.blockers ? `<br><br><strong>🚫 Challenges/Blockers:</strong><br>${entry.blockers}` : ''}
+                        
+                        ${entry.nextSteps ? `<br><br><strong>📋 Next Steps:</strong><br>${entry.nextSteps}` : ''}
+                        
+                        ${filesHtml}
+                    </div>
+                    
+                    <div style="font-size: 12px; color: #6c757d; margin-top: 15px; padding-top: 10px; border-top: 1px solid #dee2e6;">
+                        Created: ${new Date(entry.createdAt).toLocaleString()}<br>
+                        Last updated: ${new Date(entry.updatedAt).toLocaleString()}
+                    </div>
+                </div>
+            `;
+        }
+
+        function getCategoryIcon(category) {
+            const icons = {
+                'standup': '📝',
+                'achievement': '🏆',
+                'project': '💼',
+                'meeting': '🤝',
+                'learning': '📚',
+                'other': '📌'
+            };
+            return icons[category] || '📌';
+        }
+
+        // Edit and delete functions
+        function editCurrentEntry() {
+            const activeEntry = document.querySelector('.entry-item.active');
+            if (!activeEntry) return;
+
+            const entryId = activeEntry.onclick.toString().match(/'([^']+)'/)[1];
+            const entry = getEntryById(entryId);
+            
+            if (!entry) return;
+
+            // Populate form with entry data
+            document.getElementById('entryDate').value = entry.date;
+            document.getElementById('category').value = entry.category;
+            document.getElementById('todayWork').value = entry.work;
+            document.getElementById('blockers').value = entry.blockers || '';
+            document.getElementById('nextSteps').value = entry.nextSteps || '';
+            
+            // Set uploaded files
+            uploadedFiles = [...(entry.files || [])];
+            displayUploadedFiles();
+            
+            // Set editing mode
+            currentEditingEntry = entryId;
+            document.getElementById('saveBtn').textContent = '💾 Update Entry';
+            
+            // Switch to entry tab
+            showTab('entry');
+        }
+
+        function deleteCurrentEntry() {
+            const activeEntry = document.querySelector('.entry-item.active');
+            if (!activeEntry) return;
+
+            const entryId = activeEntry.onclick.toString().match(/'([^']+)'/)[1];
+            
+            if (confirm('Are you sure you want to delete this entry? This action cannot be undone.')) {
+                const allEntries = getAllEntries();
+                const updatedEntries = allEntries.filter(e => e.id !== entryId);
+                saveAllEntries(updatedEntries);
+                
+                updateEntriesList();
+                document.getElementById('entryDisplay').innerHTML = '<div class="no-entries">Entry deleted</div>';
+                document.getElementById('viewActions').style.display = 'none';
+            }
+        }
+
+        // Performance review functions
+        function updatePerformanceSummary() {
+            const period = document.getElementById('reportPeriod').value;
+            const { startDate, endDate } = getDateRange(period);
+            const entries = getEntriesByDateRange(startDate, endDate);
+            
+            // Calculate stats
+            const stats = calculateStats(entries);
+            
+            // Display stats
+            document.getElementById('summaryStats').innerHTML = `
+                <div class="stat-card">
+                    <div class="stat-number">${stats.totalEntries}</div>
+                    <div class="stat-label">Total Entries</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-number">${stats.achievements}</div>
+                    <div class="stat-label">Achievements</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-number">${stats.projects}</div>
+                    <div class="stat-label">Projects</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-number">${stats.totalFiles}</div>
+                    <div class="stat-label">Files Attached</div>
+                </div>
+            `;
+            
+            // Display entries
+            displayPerformanceEntries(entries);
+        }
+
+        function getDateRange(period) {
+            const today = new Date();
+            let startDate, endDate;
+            
+            switch(period) {
+                case 'thisWeek':
+                    startDate = new Date(today);
+                    startDate.setDate(today.getDate() - today.getDay());
+                    endDate = today;
+                    break;
+                case 'thisMonth':
+                    startDate = new Date(today.getFullYear(), today.getMonth(), 1);
+                    endDate = today;
+                    break;
+                case 'thisQuarter':
+                    const quarterStart = Math.floor(today.getMonth() / 3) * 3;
+                    startDate = new Date(today.getFullYear(), quarterStart, 1);
+                    endDate = today;
+                    break;
+                case 'thisYear':
+                    startDate = new Date(today.getFullYear(), 0, 1);
+                    endDate = today;
+                    break;
+                default:
+                    startDate = new Date(today);
+                    startDate.setDate(today.getDate() - 30);
+                    endDate = today;
+            }
+            
+            return { startDate, endDate };
+        }
+
+        function calculateStats(entries) {
+            return {
+                totalEntries: entries.length,
+                achievements: entries.filter(e => e.category === 'achievement').length,
+                projects: entries.filter(e => e.category === 'project').length,
+                totalFiles: entries.reduce((sum, e) => sum + (e.files ? e.files.length : 0), 0)
+            };
+        }
+
+        function displayPerformanceEntries(entries) {
+            const container = document.getElementById('performanceEntries');
+            
+            if (entries.length === 0) {
+                container.innerHTML = '<div class="no-entries">No entries found for this period</div>';
+                return;
+            }
+            
+            const groupedEntries = groupEntriesByCategory(entries);
+            
+            container.innerHTML = Object.keys(groupedEntries).map(category => `
+                <div style="margin: 20px 0;">
+                    <h4 style="color: #007AFF; margin-bottom: 10px;">${getCategoryIcon(category)} ${category.toUpperCase()}</h4>
+                    ${groupedEntries[category].map(entry => `
+                        <div class="entry-display" style="margin: 10px 0;">
+                            <div style="font-size: 14px; color: #6c757d; margin-bottom: 8px;">
+                                ${new Date(entry.date).toLocaleDateString()}
+                            </div>
+                            <div style="white-space: pre-wrap; line-height: 1.5;">
+                                ${entry.work}
+                                ${entry.nextSteps ? `\n\nNext Steps: ${entry.nextSteps}` : ''}
+                            </div>
+                        </div>
+                    `).join('')}
+                </div>
+            `).join('');
+        }
+
+        function groupEntriesByCategory(entries) {
+            return entries.reduce((groups, entry) => {
+                const category = entry.category;
+                if (!groups[category]) {
+                    groups[category] = [];
+                }
+                groups[category].push(entry);
+                return groups;
+            }, {});
+        }
+
+        // Export functions
+        function exportReport(format) {
+            const period = document.getElementById('reportPeriod').value;
+            const { startDate, endDate } = getDateRange(period);
+            const entries = getEntriesByDateRange(startDate, endDate);
+            
+            if (entries.length === 0) {
+                alert('No entries to export for this period!');
+                return;
+            }
+            
+            if (format === 'json') {
+                const dataStr = JSON.stringify(entries, null, 2);
+                downloadFile(dataStr, `performance-report-${period}.json`, 'application/json');
+            } else {
+                const reportText = generateTextReport(entries, period);
+                downloadFile(reportText, `performance-report-${period}.txt`, 'text/plain');
+            }
+        }
+
+        function generateTextReport(entries, period) {
+            const groupedEntries = groupEntriesByCategory(entries);
+            const stats = calculateStats(entries);
+            
+            let report = `PERFORMANCE REPORT - ${period.toUpperCase()}\n`;
+            report += `Generated: ${new Date().toLocaleString()}\n`;
+            report += `Period: ${period}\n`;
+            report += `Total Entries: ${stats.totalEntries}\n\n`;
+            
+            report += `SUMMARY:\n`;
+            report += `• Achievements: ${stats.achievements}\n`;
+            report += `• Project Work: ${stats.projects}\n`;
+            report += `• Files Attached: ${stats.totalFiles}\n\n`;
+            
+            Object.keys(groupedEntries).forEach(category => {
+                report += `${category.toUpperCase()}:\n`;
+                report += `${'='.repeat(category.length + 1)}\n`;
+                
+                groupedEntries[category].forEach(entry => {
+                    report += `${new Date(entry.date).toLocaleDateString()}:\n`;
+                    report += `${entry.work}\n`;
+                    if (entry.nextSteps) {
+                        report += `Next Steps: ${entry.nextSteps}\n`;
+                    }
+                    report += `\n`;
+                });
+                report += `\n`;
+            });
+            
+            return report;
+        }
+
+        function copyToClipboard() {
+            const period = document.getElementById('reportPeriod').value;
+            const { startDate, endDate } = getDateRange(period);
+            const entries = getEntriesByDateRange(startDate, endDate);
+            
+            if (entries.length === 0) {
+                alert('No entries to copy for this period!');
+                return;
+            }
+            
+            const reportText = generateTextReport(entries, period);
+            navigator.clipboard.writeText(reportText).then(() => {
+                alert('Report copied to clipboard!');
+            });
+        }
+
+        function downloadFile(content, filename, contentType) {
+            const blob = new Blob([content], { type: contentType });
+            const url = URL.createObjectURL(blob);
+            const link = document.createElement('a');
+            link.href = url;
+            link.download = filename;
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+            URL.revokeObjectURL(url);
+        }
+
+        // Initialize
+        document.getElementById('entryDate').addEventListener('change', updateEntriesList);
+        updateEntriesList();
+    </script>
+</body>
+</html>
