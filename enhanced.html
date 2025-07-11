@@ -541,6 +541,12 @@
                             <button onclick="exportReport('text')" class="btn-success">📄 Export as Text</button>
                             <button onclick="exportReport('json')" class="btn-secondary">💾 Export as JSON</button>
                             <button onclick="copyToClipboard()" class="btn-secondary">📋 Copy to Clipboard</button>
+                            <button onclick="importData()" style="background: #fd7e14;">📥 Import Data</button>
+                            <input type="file" id="importFile" accept=".json" style="display: none;" onchange="handleImport(event)">
+                        </div>
+                        
+                        <div id="backupStatus" style="margin-top: 15px; padding: 10px; background: #f8f9fa; border-radius: 6px; font-size: 12px; color: #6c757d;">
+                            <!-- Backup status will be shown here -->
                         </div>
                     </div>
 
@@ -1042,6 +1048,9 @@
             
             // Display entries
             displayPerformanceEntries(entries);
+            
+            // Update backup status
+            updateBackupStatus();
         }
 
         function getDateRange(period) {
@@ -1138,9 +1147,12 @@
             if (format === 'json') {
                 const dataStr = JSON.stringify(entries, null, 2);
                 downloadFile(dataStr, `performance-report-${period}.json`, 'application/json');
+                localStorage.setItem('lastBackupTime', new Date().toISOString());
+                showNotification('JSON backup created successfully!', 'success');
             } else {
                 const reportText = generateTextReport(entries, period);
                 downloadFile(reportText, `performance-report-${period}.txt`, 'text/plain');
+                showNotification('Text report exported successfully!', 'success');
             }
         }
 
@@ -1204,9 +1216,135 @@
             URL.revokeObjectURL(url);
         }
 
+        // Import/Export functions
+        function importData() {
+            document.getElementById('importFile').click();
+        }
+
+        function handleImport(event) {
+            const file = event.target.files[0];
+            if (!file) return;
+
+            if (!file.name.endsWith('.json')) {
+                showNotification('Please select a JSON file', 'error');
+                return;
+            }
+
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                try {
+                    const importedData = JSON.parse(e.target.result);
+                    
+                    if (!Array.isArray(importedData)) {
+                        showNotification('Invalid file format', 'error');
+                        return;
+                    }
+
+                    // Validate data structure
+                    const validEntries = importedData.filter(entry => 
+                        entry.id && entry.date && entry.work
+                    );
+
+                    if (validEntries.length === 0) {
+                        showNotification('No valid entries found in file', 'error');
+                        return;
+                    }
+
+                    // Ask user how to handle existing data
+                    const action = confirm(
+                        `Import ${validEntries.length} entries?\n\n` +
+                        `Click OK to MERGE with existing data\n` +
+                        `Click Cancel to REPLACE all existing data`
+                    );
+
+                    const existingEntries = action ? getAllEntries() : [];
+                    
+                    // Merge or replace
+                    const allEntries = action ? 
+                        [...existingEntries, ...validEntries] : 
+                        validEntries;
+
+                    // Remove duplicates based on ID
+                    const uniqueEntries = allEntries.filter((entry, index, self) => 
+                        index === self.findIndex(e => e.id === entry.id)
+                    );
+
+                    saveAllEntries(uniqueEntries);
+                    updateEntriesList();
+                    updatePerformanceSummary();
+
+                    showNotification(
+                        `Successfully imported ${validEntries.length} entries!`, 
+                        'success'
+                    );
+
+                } catch (error) {
+                    showNotification('Error reading file. Please check the format.', 'error');
+                }
+            };
+            reader.readAsText(file);
+            
+            // Clear file input
+            event.target.value = '';
+        }
+
+        // Backup reminder system
+        function checkBackupReminder() {
+            const lastBackup = localStorage.getItem('lastBackupReminder');
+            const now = Date.now();
+            const oneWeek = 7 * 24 * 60 * 60 * 1000; // 7 days in milliseconds
+            
+            if (!lastBackup || (now - parseInt(lastBackup)) > oneWeek) {
+                const entries = getAllEntries();
+                if (entries.length >= 5) { // Only remind if user has significant data
+                    setTimeout(() => {
+                        if (confirm('💾 Backup Reminder!\n\nYou have ' + entries.length + ' entries. Would you like to create a backup now?\n\n(Recommended weekly for data safety)')) {
+                            // Switch to performance tab
+                            document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+                            document.querySelector('.tab[onclick="showTab(\'performance\')"]').classList.add('active');
+                            document.querySelectorAll('.view').forEach(v => v.classList.add('hidden'));
+                            document.getElementById('performanceView').classList.remove('hidden');
+                            updatePerformanceSummary();
+                            
+                            showNotification('Export your data using the buttons below', 'info');
+                        }
+                        localStorage.setItem('lastBackupReminder', now.toString());
+                    }, 2000); // Show after 2 seconds
+                }
+            }
+        }
+
+        function updateBackupStatus() {
+            const lastBackup = localStorage.getItem('lastBackupTime');
+            const statusDiv = document.getElementById('backupStatus');
+            
+            if (lastBackup) {
+                const backupDate = new Date(lastBackup);
+                const daysSince = Math.floor((Date.now() - backupDate.getTime()) / (1000 * 60 * 60 * 24));
+                
+                let statusText = `💾 Last backup: ${backupDate.toLocaleDateString()} at ${backupDate.toLocaleTimeString()}`;
+                let statusColor = '#28a745'; // green
+                
+                if (daysSince > 7) {
+                    statusText += ` (${daysSince} days ago - Consider backing up!)`;
+                    statusColor = '#ffc107'; // yellow
+                }
+                if (daysSince > 14) {
+                    statusColor = '#dc3545'; // red
+                }
+                
+                statusDiv.innerHTML = `<span style="color: ${statusColor};">${statusText}</span>`;
+            } else {
+                statusDiv.innerHTML = '<span style="color: #dc3545;">⚠️ No backup created yet - Highly recommended!</span>';
+            }
+        }
+
         // Initialize
         document.getElementById('entryDate').addEventListener('change', updateEntriesList);
         updateEntriesList();
+        
+        // Check for backup reminder
+        checkBackupReminder();
     </script>
 </body>
 </html>
