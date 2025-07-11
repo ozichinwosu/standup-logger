@@ -529,6 +529,7 @@
                         <div class="form-group">
                             <label for="reportPeriod">Report Period:</label>
                             <select id="reportPeriod" onchange="updatePerformanceSummary()">
+                                <option value="all">All Entries</option>
                                 <option value="thisWeek">This Week</option>
                                 <option value="thisMonth">This Month</option>
                                 <option value="thisQuarter">This Quarter</option>
@@ -1022,12 +1023,21 @@
             const period = document.getElementById('reportPeriod').value;
             const { startDate, endDate } = getDateRange(period);
             const entries = getEntriesByDateRange(startDate, endDate);
+            const allEntries = getAllEntries();
             
             // Calculate stats
             const stats = calculateStats(entries);
             
-            // Display stats
+            // Display stats with filtering info
+            const filterInfo = period === 'all' ? 
+                `Showing all ${entries.length} entries` :
+                `Showing ${entries.length} of ${allEntries.length} entries (${period})`;
+            
             document.getElementById('summaryStats').innerHTML = `
+                <div class="stat-card" style="grid-column: 1 / -1; background: linear-gradient(135deg, #007AFF, #0051D5); color: white;">
+                    <div class="stat-number">${filterInfo}</div>
+                    <div class="stat-label" style="color: rgba(255,255,255,0.8);">📊 Current Filter</div>
+                </div>
                 <div class="stat-card">
                     <div class="stat-number">${stats.totalEntries}</div>
                     <div class="stat-label">Total Entries</div>
@@ -1058,6 +1068,11 @@
             let startDate, endDate;
             
             switch(period) {
+                case 'all':
+                    // Return a very wide date range to include all entries
+                    startDate = new Date('2000-01-01');
+                    endDate = new Date('2100-12-31');
+                    break;
                 case 'thisWeek':
                     startDate = new Date(today);
                     startDate.setDate(today.getDate() - today.getDay());
@@ -1096,9 +1111,27 @@
 
         function displayPerformanceEntries(entries) {
             const container = document.getElementById('performanceEntries');
+            const allEntries = getAllEntries();
+            const currentPeriod = document.getElementById('reportPeriod').value;
             
             if (entries.length === 0) {
-                container.innerHTML = '<div class="no-entries">No entries found for this period</div>';
+                if (allEntries.length > 0 && currentPeriod !== 'all') {
+                    container.innerHTML = `
+                        <div class="no-entries">
+                            <div style="text-align: center; padding: 40px;">
+                                <div style="font-size: 48px; margin-bottom: 15px;">📅</div>
+                                <h3 style="margin-bottom: 10px; color: #6c757d;">No entries found for ${currentPeriod}</h3>
+                                <p style="color: #6c757d; margin-bottom: 15px;">You have ${allEntries.length} total entries, but none match the current time filter.</p>
+                                <button onclick="document.getElementById('reportPeriod').value='all'; updatePerformanceSummary();" 
+                                        style="background: #007AFF; color: white; border: none; padding: 10px 20px; border-radius: 6px; cursor: pointer;">
+                                    📊 Show All Entries
+                                </button>
+                            </div>
+                        </div>
+                    `;
+                } else {
+                    container.innerHTML = '<div class="no-entries">No entries found for this period</div>';
+                }
                 return;
             }
             
@@ -1160,9 +1193,9 @@
             const groupedEntries = groupEntriesByCategory(entries);
             const stats = calculateStats(entries);
             
-            let report = `PERFORMANCE REPORT - ${period.toUpperCase()}\n`;
+            let report = `PERFORMANCE REPORT - ${period === 'all' ? 'ALL ENTRIES' : period.toUpperCase()}\n`;
             report += `Generated: ${new Date().toLocaleString()}\n`;
-            report += `Period: ${period}\n`;
+            report += `Period: ${period === 'all' ? 'All Time' : period}\n`;
             report += `Total Entries: ${stats.totalEntries}\n\n`;
             
             report += `SUMMARY:\n`;
