@@ -1138,19 +1138,73 @@
             const groupedEntries = groupEntriesByCategory(entries);
             
             container.innerHTML = Object.keys(groupedEntries).map(category => `
-                <div style="margin: 20px 0;">
-                    <h4 style="color: #007AFF; margin-bottom: 10px;">${getCategoryIcon(category)} ${category.toUpperCase()}</h4>
-                    ${groupedEntries[category].map(entry => `
-                        <div class="entry-display" style="margin: 10px 0;">
-                            <div style="font-size: 14px; color: #6c757d; margin-bottom: 8px;">
-                                ${new Date(entry.date).toLocaleDateString()}
+                <div style="margin: 25px 0;">
+                    <h4 style="color: #007AFF; margin-bottom: 15px; font-size: 18px; border-bottom: 2px solid #007AFF; padding-bottom: 5px;">
+                        ${getCategoryIcon(category)} ${category.toUpperCase()}
+                    </h4>
+                    ${groupedEntries[category].map(entry => {
+                        const filesHtml = entry.files && entry.files.length > 0 ? `
+                            <div style="margin-top: 15px; padding: 12px; background: #f8f9fa; border-radius: 6px; border-left: 4px solid #007AFF;">
+                                <strong>📎 Attached Files:</strong><br>
+                                ${entry.files.map(file => `
+                                    <div style="margin: 8px 0; padding: 8px; background: white; border-radius: 4px; border: 1px solid #dee2e6;">
+                                        <a href="${file.data}" download="${file.name}" style="color: #007AFF; text-decoration: none; font-weight: 500;">
+                                            📄 ${file.name} <span style="color: #6c757d; font-size: 12px;">(${(file.size / 1024).toFixed(1)} KB)</span>
+                                        </a>
+                                    </div>
+                                `).join('')}
                             </div>
-                            <div style="white-space: pre-wrap; line-height: 1.5;">
-                                ${entry.work}
-                                ${entry.nextSteps ? `\n\nNext Steps: ${entry.nextSteps}` : ''}
+                        ` : '';
+
+                        return `
+                            <div style="margin: 15px 0; background: white; border-radius: 8px; padding: 20px; border: 1px solid #e9ecef; box-shadow: 0 2px 4px rgba(0,0,0,0.05);">
+                                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px; padding-bottom: 10px; border-bottom: 1px solid #e9ecef;">
+                                    <div style="font-weight: 600; color: #007AFF; font-size: 16px;">
+                                        ${new Date(entry.date).toLocaleDateString('en-US', { 
+                                            weekday: 'long', 
+                                            year: 'numeric', 
+                                            month: 'long', 
+                                            day: 'numeric' 
+                                        })}
+                                    </div>
+                                    <div style="background: #007AFF; color: white; padding: 4px 8px; border-radius: 4px; font-size: 12px;">
+                                        ${getCategoryIcon(entry.category)} ${entry.category}
+                                    </div>
+                                </div>
+                                
+                                <div style="margin-bottom: 15px;">
+                                    <strong style="color: #28a745; font-size: 14px;">🎯 ACCOMPLISHMENTS:</strong>
+                                    <div style="margin-top: 8px; padding: 12px; background: #f8f9fa; border-radius: 6px; border-left: 4px solid #28a745; white-space: pre-wrap; line-height: 1.6;">
+                                        ${entry.work}
+                                    </div>
+                                </div>
+                                
+                                ${entry.blockers ? `
+                                    <div style="margin-bottom: 15px;">
+                                        <strong style="color: #dc3545; font-size: 14px;">🚫 CHALLENGES/BLOCKERS:</strong>
+                                        <div style="margin-top: 8px; padding: 12px; background: #fff5f5; border-radius: 6px; border-left: 4px solid #dc3545; white-space: pre-wrap; line-height: 1.6;">
+                                            ${entry.blockers}
+                                        </div>
+                                    </div>
+                                ` : ''}
+                                
+                                ${entry.nextSteps ? `
+                                    <div style="margin-bottom: 15px;">
+                                        <strong style="color: #007AFF; font-size: 14px;">📋 NEXT STEPS:</strong>
+                                        <div style="margin-top: 8px; padding: 12px; background: #f0f8ff; border-radius: 6px; border-left: 4px solid #007AFF; white-space: pre-wrap; line-height: 1.6;">
+                                            ${entry.nextSteps}
+                                        </div>
+                                    </div>
+                                ` : ''}
+                                
+                                ${filesHtml}
+                                
+                                <div style="font-size: 11px; color: #6c757d; margin-top: 15px; padding-top: 10px; border-top: 1px solid #e9ecef; text-align: right;">
+                                    Last updated: ${new Date(entry.updatedAt).toLocaleString()}
+                                </div>
                             </div>
-                        </div>
-                    `).join('')}
+                        `;
+                    }).join('')}
                 </div>
             `).join('');
         }
