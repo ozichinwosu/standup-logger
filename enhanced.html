@@ -100,21 +100,38 @@
         }
 
         .entry-item {
-            padding: 10px;
+            padding: 12px;
             border: 1px solid #e9ecef;
-            border-radius: 6px;
-            margin: 5px 0;
+            border-radius: 8px;
+            margin: 8px 0;
             cursor: pointer;
-            font-size: 12px;
+            font-size: 13px;
+            transition: all 0.2s ease;
+            background: white;
         }
 
         .entry-item:hover {
-            background: #f0f0f0;
+            background: #f8f9fa;
+            border-color: #007AFF;
+            transform: translateY(-1px);
+            box-shadow: 0 2px 8px rgba(0, 122, 255, 0.1);
         }
 
         .entry-item.active {
             background: #007AFF;
             color: white;
+            border-color: #007AFF;
+            box-shadow: 0 4px 12px rgba(0, 122, 255, 0.3);
+        }
+
+        .entry-item-header {
+            font-weight: 600;
+            margin-bottom: 4px;
+        }
+
+        .entry-item-time {
+            font-size: 11px;
+            opacity: 0.7;
         }
 
         .main-panel {
@@ -365,6 +382,33 @@
             font-style: italic;
         }
 
+        .notification {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            padding: 15px 20px;
+            background: #28a745;
+            color: white;
+            border-radius: 8px;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+            z-index: 1000;
+            font-weight: 600;
+            transform: translateX(400px);
+            transition: transform 0.3s ease;
+        }
+
+        .notification.show {
+            transform: translateX(0);
+        }
+
+        .notification.error {
+            background: #dc3545;
+        }
+
+        .notification.info {
+            background: #007AFF;
+        }
+
         @media (max-width: 768px) {
             .main-content {
                 grid-template-columns: 1fr;
@@ -462,11 +506,16 @@
 
                 <div id="viewEntryView" class="view hidden">
                     <div id="entryDisplay" class="no-entries">
-                        Select a date or entry from the sidebar to view details
+                        <div style="text-align: center; padding: 40px;">
+                            <div style="font-size: 48px; margin-bottom: 15px;">📝</div>
+                            <h3 style="margin-bottom: 10px; color: #6c757d;">No Entry Selected</h3>
+                            <p style="color: #6c757d;">Select a date from the sidebar or create a new entry to get started</p>
+                        </div>
                     </div>
                     <div class="button-group" id="viewActions" style="display: none;">
-                        <button onclick="editCurrentEntry()" class="btn-secondary">✏️ Edit Entry</button>
+                        <button onclick="editCurrentEntry()" class="btn-secondary">✏️ Edit This Entry</button>
                         <button onclick="deleteCurrentEntry()" class="btn-danger">🗑️ Delete Entry</button>
+                        <button onclick="createNewEntry()" style="background: #28a745;">➕ Create New Entry</button>
                     </div>
                 </div>
 
@@ -507,6 +556,20 @@
         // Initialize app
         let currentEditingEntry = null;
         let uploadedFiles = [];
+
+        // Notification system
+        function showNotification(message, type = 'success') {
+            const notification = document.createElement('div');
+            notification.className = `notification ${type}`;
+            notification.textContent = message;
+            document.body.appendChild(notification);
+            
+            setTimeout(() => notification.classList.add('show'), 100);
+            setTimeout(() => {
+                notification.classList.remove('show');
+                setTimeout(() => document.body.removeChild(notification), 300);
+            }, 3000);
+        }
 
         // Set current date
         document.getElementById('currentDate').textContent = new Date().toLocaleDateString('en-US', { 
@@ -623,25 +686,37 @@
 
             saveAllEntries(allEntries);
 
-            // Show success
-            const btn = document.getElementById('saveBtn');
-            const originalText = btn.textContent;
-            btn.textContent = '✅ Saved!';
-            btn.classList.add('btn-success');
-
-            setTimeout(() => {
-                btn.textContent = originalText;
-                btn.classList.remove('btn-success');
-            }, 2000);
+            // Show success notification
+            showNotification(currentEditingEntry ? 'Entry updated successfully!' : 'Entry saved successfully!');
 
             // Clear form and reset
             clearForm();
             currentEditingEntry = null;
+            
+            // Update sidebar to show the new entry
             updateEntriesList();
             
-            // Switch to view tab
-            showTab('view');
+            // Automatically switch to view tab and show the entry
+            document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+            document.querySelector('.tab[onclick="showTab(\'view\')"]').classList.add('active');
+            document.querySelectorAll('.view').forEach(v => v.classList.add('hidden'));
+            document.getElementById('viewEntryView').classList.remove('hidden');
+            
+            // Display the entry that was just saved
             displayEntry(entry);
+            document.getElementById('viewActions').style.display = 'flex';
+            
+            // Highlight the entry in the sidebar
+            setTimeout(() => {
+                const entryItems = document.querySelectorAll('.entry-item');
+                if (entryItems.length > 0) {
+                    entryItems[0].classList.add('active');
+                    entryItems[0].style.background = '#e8f5e8';
+                    setTimeout(() => {
+                        entryItems[0].style.background = '';
+                    }, 2000);
+                }
+            }, 100);
         }
 
         function clearForm() {
@@ -751,9 +826,10 @@
 
             container.innerHTML = dateEntries.map(entry => `
                 <div class="entry-item" onclick="selectEntry('${entry.id}')">
-                    <div style="font-weight: 600;">${getCategoryIcon(entry.category)} ${entry.category}</div>
-                    <div style="font-size: 11px; color: #6c757d; margin-top: 5px;">
-                        ${new Date(entry.updatedAt).toLocaleTimeString()}
+                    <div class="entry-item-header">${getCategoryIcon(entry.category)} ${entry.category}</div>
+                    <div class="entry-item-time">${new Date(entry.updatedAt).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}</div>
+                    <div style="font-size: 11px; margin-top: 4px; opacity: 0.8;">
+                        ${entry.work.substring(0, 50)}${entry.work.length > 50 ? '...' : ''}
                     </div>
                 </div>
             `).join('');
@@ -775,12 +851,15 @@
 
             const groupedEntries = groupEntriesByDate(entries);
             container.innerHTML = Object.keys(groupedEntries).map(date => `
-                <div style="font-weight: 600; margin: 10px 0 5px 0; color: #007AFF;">${new Date(date).toLocaleDateString()}</div>
+                <div style="font-weight: 600; margin: 15px 0 8px 0; color: #007AFF; border-bottom: 1px solid #e9ecef; padding-bottom: 5px;">
+                    📅 ${new Date(date).toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' })}
+                </div>
                 ${groupedEntries[date].map(entry => `
                     <div class="entry-item" onclick="selectEntry('${entry.id}')">
-                        <div style="font-weight: 600;">${getCategoryIcon(entry.category)} ${entry.category}</div>
-                        <div style="font-size: 11px; color: #6c757d; margin-top: 5px;">
-                            ${new Date(entry.updatedAt).toLocaleTimeString()}
+                        <div class="entry-item-header">${getCategoryIcon(entry.category)} ${entry.category}</div>
+                        <div class="entry-item-time">${new Date(entry.updatedAt).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}</div>
+                        <div style="font-size: 11px; margin-top: 4px; opacity: 0.8;">
+                            ${entry.work.substring(0, 50)}${entry.work.length > 50 ? '...' : ''}
                         </div>
                     </div>
                 `).join('')}
@@ -868,6 +947,18 @@
         }
 
         // Edit and delete functions
+        function createNewEntry() {
+            // Switch to entry tab
+            document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+            document.querySelector('.tab[onclick="showTab(\'entry\')"]').classList.add('active');
+            document.querySelectorAll('.view').forEach(v => v.classList.add('hidden'));
+            document.getElementById('entryView').classList.remove('hidden');
+            
+            // Clear form and set today's date
+            clearForm();
+            document.getElementById('entryDate').valueAsDate = new Date();
+        }
+
         function editCurrentEntry() {
             const activeEntry = document.querySelector('.entry-item.active');
             if (!activeEntry) return;
@@ -907,8 +998,15 @@
                 const updatedEntries = allEntries.filter(e => e.id !== entryId);
                 saveAllEntries(updatedEntries);
                 
+                showNotification('Entry deleted successfully', 'info');
                 updateEntriesList();
-                document.getElementById('entryDisplay').innerHTML = '<div class="no-entries">Entry deleted</div>';
+                document.getElementById('entryDisplay').innerHTML = `
+                    <div style="text-align: center; padding: 40px;">
+                        <div style="font-size: 48px; margin-bottom: 15px;">🗑️</div>
+                        <h3 style="margin-bottom: 10px; color: #6c757d;">Entry Deleted</h3>
+                        <p style="color: #6c757d;">Select another entry or create a new one</p>
+                    </div>
+                `;
                 document.getElementById('viewActions').style.display = 'none';
             }
         }
