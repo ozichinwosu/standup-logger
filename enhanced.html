@@ -619,6 +619,7 @@
                             <button onclick="exportReport('json')" class="btn-secondary">💾 Export as JSON</button>
                             <button onclick="copyToClipboard()" class="btn-secondary">📋 Copy to Clipboard</button>
                             <button onclick="importData()" style="background: #fd7e14;">📥 Import Data</button>
+                            <button onclick="fixJuly10Entries()" style="background: #dc3545;">🔧 Fix July 10 Entries</button>
                             <input type="file" id="importFile" accept=".json" style="display: none;" onchange="handleImport(event)">
                         </div>
                         
@@ -1158,42 +1159,117 @@
                 return;
             }
 
+            const oldDate = allEntries[entryIndex].date;
+
             // Update the entry's date
             allEntries[entryIndex].date = newDate;
             allEntries[entryIndex].updatedAt = new Date().toISOString();
             
             saveAllEntries(allEntries);
             
-            showNotification('Entry date changed successfully!');
+            showNotification(`Entry moved from ${oldDate} to ${newDate}!`);
             closeDateEditor();
             
-            // Update the view
+            // Clear current selection
+            selectedEntryId = null;
+            
+            // Update the date picker to show the new date and refresh the view
             document.getElementById('entryDate').value = newDate;
             updateEntriesList();
+            
+            // Auto-select the moved entry if it exists on the new date
+            setTimeout(() => {
+                const movedEntry = getEntryById(allEntries[entryIndex].id);
+                if (movedEntry) {
+                    selectEntry(movedEntry.id);
+                }
+            }, 100);
         }
 
-        // Performance review functions (simplified for this version)
+        // Performance review functions
         function updatePerformanceSummary() {
             const period = document.getElementById('reportPeriod').value;
             const allEntries = getAllEntries();
             
+            // Filter entries based on period
+            let filteredEntries = allEntries;
+            const today = new Date();
+            
+            switch(period) {
+                case 'thisWeek':
+                    const startOfWeek = new Date(today);
+                    startOfWeek.setDate(today.getDate() - today.getDay());
+                    filteredEntries = allEntries.filter(e => new Date(e.date) >= startOfWeek);
+                    break;
+                case 'thisMonth':
+                    const startOfMonth = new Date(today.getFullYear(), today.getMonth(), 1);
+                    filteredEntries = allEntries.filter(e => new Date(e.date) >= startOfMonth);
+                    break;
+                case 'thisQuarter':
+                    const quarter = Math.floor(today.getMonth() / 3);
+                    const startOfQuarter = new Date(today.getFullYear(), quarter * 3, 1);
+                    filteredEntries = allEntries.filter(e => new Date(e.date) >= startOfQuarter);
+                    break;
+                case 'thisYear':
+                    const startOfYear = new Date(today.getFullYear(), 0, 1);
+                    filteredEntries = allEntries.filter(e => new Date(e.date) >= startOfYear);
+                    break;
+            }
+            
+            // Update stats
             document.getElementById('summaryStats').innerHTML = `
                 <div class="stat-card">
-                    <div class="stat-number">${allEntries.length}</div>
+                    <div class="stat-number">${filteredEntries.length}</div>
                     <div class="stat-label">Total Entries</div>
                 </div>
                 <div class="stat-card">
-                    <div class="stat-number">${allEntries.filter(e => e.category === 'achievement').length}</div>
+                    <div class="stat-number">${filteredEntries.filter(e => e.category === 'achievement').length}</div>
                     <div class="stat-label">Achievements</div>
                 </div>
                 <div class="stat-card">
-                    <div class="stat-number">${allEntries.filter(e => e.category === 'project').length}</div>
+                    <div class="stat-number">${filteredEntries.filter(e => e.category === 'project').length}</div>
                     <div class="stat-label">Projects</div>
                 </div>
                 <div class="stat-card">
-                    <div class="stat-number">${allEntries.reduce((sum, e) => sum + (e.files ? e.files.length : 0), 0)}</div>
+                    <div class="stat-number">${filteredEntries.reduce((sum, e) => sum + (e.files ? e.files.length : 0), 0)}</div>
                     <div class="stat-label">Files Attached</div>
                 </div>
+            `;
+            
+            // Display recent entries
+            displayPerformanceEntries(filteredEntries);
+        }
+        
+        function displayPerformanceEntries(entries) {
+            const container = document.getElementById('performanceEntries');
+            
+            if (entries.length === 0) {
+                container.innerHTML = '<div class="no-entries">No entries found for the selected period</div>';
+                return;
+            }
+            
+            const entriesHtml = entries.slice(0, 10).map(entry => `
+                <div class="entry-display">
+                    <div class="entry-meta">
+                        <div class="entry-date">${new Date(entry.date).toLocaleDateString('en-US', { 
+                            weekday: 'short', 
+                            month: 'short', 
+                            day: 'numeric' 
+                        })}</div>
+                        <div class="entry-category">${getCategoryIcon(entry.category)} ${entry.category}</div>
+                    </div>
+                    <div class="entry-content">
+                        <strong>🎯 Accomplishments:</strong><br>
+                        ${entry.work.length > 200 ? entry.work.substring(0, 200) + '...' : entry.work}
+                        ${entry.blockers ? `<br><br><strong>🚫 Blockers:</strong><br>${entry.blockers.length > 100 ? entry.blockers.substring(0, 100) + '...' : entry.blockers}` : ''}
+                    </div>
+                </div>
+            `).join('');
+            
+            container.innerHTML = `
+                <h4 style="margin-bottom: 15px;">Recent Entries (${entries.length} total)</h4>
+                ${entriesHtml}
+                ${entries.length > 10 ? `<p style="text-align: center; color: #6c757d; margin-top: 15px;">Showing 10 of ${entries.length} entries</p>` : ''}
             `;
         }
 
@@ -1290,6 +1366,39 @@
             reader.readAsText(file);
             
             event.target.value = '';
+        }
+
+        // Quick fix function for July 10 entries
+        function fixJuly10Entries() {
+            const allEntries = getAllEntries();
+            const july10Entries = allEntries.filter(e => e.date === '2025-07-10');
+            
+            if (july10Entries.length === 0) {
+                showNotification('No July 10 entries found to fix', 'info');
+                return;
+            }
+            
+            if (confirm(`Found ${july10Entries.length} entries on July 10, 2025. Move them to July 11, 2025 (today)?`)) {
+                const updatedEntries = allEntries.map(entry => {
+                    if (entry.date === '2025-07-10') {
+                        return {
+                            ...entry,
+                            date: '2025-07-11',
+                            updatedAt: new Date().toISOString()
+                        };
+                    }
+                    return entry;
+                });
+                
+                saveAllEntries(updatedEntries);
+                showNotification(`Successfully moved ${july10Entries.length} entries to July 11!`);
+                
+                // Refresh the current view
+                updatePerformanceSummary();
+                if (document.getElementById('viewEntryView').classList.contains('hidden') === false) {
+                    updateEntriesList();
+                }
+            }
         }
 
         function downloadFile(content, filename, contentType) {
